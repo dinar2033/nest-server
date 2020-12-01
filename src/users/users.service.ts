@@ -1,30 +1,37 @@
 import { Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model } from 'mongoose'
+import * as bcrypt from 'bcrypt'
+import * as _ from 'lodash'
+
 import { CreateUserDto } from './dto/create-user.dto'
-import { User, UserDocument } from './schemas/user.schema'
+import { IUser } from './interfaces/user.interface';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private UserModel: Model<UserDocument>){
-  }
+  constructor(@InjectModel('User') private UserModel: Model<IUser>){}
 
   private users = []
 
-  async getAll(): Promise<User[]> {
+  async getAll(): Promise<IUser[]> {
     return this.UserModel.find().exec()
   }
 
-  async getById(id: string): Promise<User> {
-    return this.UserModel.findById(id)
+  async getById(id: string): Promise<IUser> {
+    return this.UserModel.findById(id).exec()
   }
 
-  async create(userDto: CreateUserDto): Promise<User> {
-    const newUser = new this.UserModel(userDto)
-    return newUser.save()
+  async create(createUserDto: CreateUserDto, roles: Array<string>): Promise<IUser> {
+    const saltRounds = 10
+    const salt = await bcrypt.genSalt(saltRounds)
+    const hash = await bcrypt.hash(createUserDto.password, salt)
+    const newUser = new this.UserModel(_.assignIn(createUserDto, { password: hash, roles }))
+    return await newUser.save()
   }
 
-  async remove(id: string): Promise<User> {
+  async removeById(id: string): Promise<IUser> {
     return this.UserModel.findByIdAndRemove(id)
   }
+
+
 }
