@@ -17,8 +17,8 @@ export class UsersService {
     return this.UserModel.find().exec()
   }
 
-  async getById(id: string): Promise<IUser> {
-    return this.UserModel.findById(id).exec()
+  async findByLogin(login: string): Promise<IUser> {
+    return await this.UserModel.findOne({ login }).exec();
   }
 
   async create(createUserDto: CreateUserDto, roles: Array<string>): Promise<IUser> {
