@@ -24,7 +24,4 @@ export class UsersController {
   removeById(@Param('id') id: string): Promise<IUser>{
     return this.userService.removeById(id)
   }
-
-
-
 }

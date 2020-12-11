@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt/dist/jwt.service';
 import { SignOptions } from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt'
@@ -9,7 +9,6 @@ import { TokenService } from 'src/token/token.service';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { roleEnum } from 'src/users/enums/role.enum';
 import { IReadableUser } from 'src/users/interfaces/readable-user.interface';
-import { IUser } from 'src/users/interfaces/user.interface';
 import { UsersService } from 'src/users/users.service';
 import { CreateUserTokenDto } from './../token/dto/create-user-token.dto';
 import { SignInDto } from './dto/signin.dto';
@@ -55,7 +54,7 @@ export class AuthService {
     return this.jwtService.sign(data, options)
   }
 
-  async signIn({ login, password }: SignInDto): Promise<IReadableUser>{
+  async signIn({ login, password }: SignInDto): Promise<string>{
     const user = await this.userService.findByLogin(login);
     if(user && (await bcrypt.compare(password, user.password))){
       const tokenPayload: ITokenPayload = {
@@ -63,19 +62,20 @@ export class AuthService {
         roles: user.role
       }
       const token = await this.generateToken(tokenPayload);
-      // const expireAt = moment().add(1, 'day').toISOString();
+      const expireAt = moment().add(15, 'minute').toISOString();
     
-      // await this.saveToken({
-      //   token,
-      //   expireAt,
-      //   uId: user._id
-      // });
+      await this.saveToken({
+        token,
+        expireAt,
+        uId: user._id
+      });
       const readableUser = user.toObject() as IReadableUser;
       readableUser.accessToken = token;
-      
-      return _.omit<any>(readableUser, Object.values(userSensitiveFieldsEnum)) as IReadableUser;
+      _.omit<any>(readableUser, Object.values(userSensitiveFieldsEnum)) as IReadableUser
+
+      return readableUser.accessToken;
     }
-    throw new BadRequestException('Invalid credintials')
+    throw new BadRequestException('Password is false')
   }
 
   // async confirm(token: string): Promise<IUser>{
@@ -108,5 +108,12 @@ export class AuthService {
     return userToken;
   }
 
+  async deleteToken(uId: string, token: string){
+    await this.tokenService.delete(uId, token);
+    return true
+  }
 
+  async deleteAllTokens(uId: string){
+    return await this.tokenService.deleteAll(uId);
+  }
 }
